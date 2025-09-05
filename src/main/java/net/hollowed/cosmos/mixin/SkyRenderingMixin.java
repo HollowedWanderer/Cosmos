@@ -27,9 +27,11 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.random.Random;
 import org.joml.*;
 import org.spongepowered.asm.mixin.*;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.lang.Math;
-import java.util.List;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
 
@@ -42,26 +44,30 @@ public class SkyRenderingMixin {
     private static final RenderPipeline POSITION_TEXTURE_COLOR_STARS = RenderPipelines.register(
             RenderPipeline.builder(TRANSFORMS_AND_PROJECTION_SNIPPET)
                     .withLocation("pipeline/stars")
-                    .withVertexShader("core/stars")
-                    .withFragmentShader("core/stars")
+                    .withVertexShader("core/cosmos_stars")
+                    .withFragmentShader("core/cosmos_stars")
                     .withBlend(BlendFunction.OVERLAY)
                     .withDepthWrite(false)
                     .withVertexFormat(VertexFormats.POSITION_TEXTURE_COLOR, VertexFormat.DrawMode.QUADS)
                     .build()
     );
 
-    @Shadow private int starIndexCount;
+
+    @Unique
+    private int cosmosStarIndexCount;
 
     @Shadow @Final private RenderSystem.ShapeIndexBuffer indexBuffer;
 
-    @Shadow @Final private GpuBuffer starVertexBuffer;
+    @Unique
+    private GpuBuffer cosmosStarVertexBuffer;
 
-    /**
-     * @author Hollowed
-     * @reason I really don't see how this is an issue, if you have an issue with this, please put it on the GitHub and/or make a PR
-     */
-    @Overwrite
-    private GpuBuffer createStars() {
+    @Inject(method = "<init>", at = @At("TAIL"))
+    private void init(CallbackInfo ci) {
+        cosmosStarVertexBuffer = createCosmosStars();
+    }
+
+    @Unique
+    private GpuBuffer createCosmosStars() {
         Random random = Random.create(12936L);
 
         GpuBuffer var19;
@@ -75,7 +81,7 @@ public class SkyRenderingMixin {
                 float g = random.nextFloat() * 2.0F - 1.0F;
                 float h = random.nextFloat() * 2.0F - 1.0F;
                 float j = random.nextFloat() * 2.0F - 1.0F;
-                float k = (CosmosConfig.sizeRange.getFirst() + random.nextFloat() * (CosmosConfig.sizeRange.get(1) - CosmosConfig.sizeRange.getFirst()));
+                float k = (CosmosConfig.sizeRange.getFirst().floatValue() + random.nextFloat() * (CosmosConfig.sizeRange.get(1).floatValue() - CosmosConfig.sizeRange.getFirst().floatValue()));
 
                 if (g < -0.48F && h < -0.23F && h > -0.32F && Math.abs(j) < 0.07F && limit > 0) {
                     k = 1.3F;
@@ -91,8 +97,10 @@ public class SkyRenderingMixin {
 
                     int alpha = CosmosConfig.alphaRange.getFirst() + random.nextInt(CosmosConfig.alphaRange.get(1) - CosmosConfig.alphaRange.getFirst());
 
-                    List<Integer> colorEntry = CosmosConfig.colors.get(random.nextInt(CosmosConfig.colors.size()));
-                    int color = ColorHelper.getArgb(alpha, colorEntry.getFirst(), colorEntry.get(1), colorEntry.get(2));
+                    String colorString = CosmosConfig.colors.get(random.nextInt(CosmosConfig.colors.size()));
+                    int[] colorEntry = hexToRGB(colorString);
+
+                    int color = ColorHelper.getArgb(alpha, colorEntry[0], colorEntry[1], colorEntry[2]);
 
                     if (northStar) {
                         color = ColorHelper.getArgb(255,255, 255, 255);
@@ -107,7 +115,7 @@ public class SkyRenderingMixin {
             }
 
             try (BuiltBuffer builtBuffer = bufferBuilder.end()) {
-                this.starIndexCount = builtBuffer.getDrawParameters().indexCount();
+                this.cosmosStarIndexCount = builtBuffer.getDrawParameters().indexCount();
                 var19 = RenderSystem.getDevice().createBuffer(() -> "Stars vertex buffer", 40, builtBuffer.getBuffer());
             }
         }
@@ -115,46 +123,59 @@ public class SkyRenderingMixin {
         return var19;
     }
 
-    /**
-     * @author Hollowed
-     * @reason I really don't see how this is an issue for 99% of mods, if you have an issue with this, please put it on the GitHub and/or make a PR
-     */
-    @Overwrite
-    private void renderStars(float brightness, MatrixStack matrices) {
-        if (MinecraftClient.getInstance().world != null) {
-            brightness *= CosmosConfig.brightnessMultiplier;
+    @Inject(method = "renderStars", at = @At("HEAD"), cancellable = true)
+    private void renderStars(float brightness, MatrixStack matrices, CallbackInfo ci) {
+        if (CosmosConfig.enabled) {
+            if (MinecraftClient.getInstance().world != null) {
+                brightness *= CosmosConfig.brightnessMultiplier;
 
-            Identifier starTextureId = Cosmos.id("textures/environment/star.png");
-            TextureManager textureManager = MinecraftClient.getInstance().getTextureManager();
-            textureManager.registerTexture(starTextureId, new ResourceTexture(starTextureId));
-            AbstractTexture abstractTexture = textureManager.getTexture(starTextureId);
+                Identifier starTextureId = Cosmos.id("textures/environment/star.png");
+                TextureManager textureManager = MinecraftClient.getInstance().getTextureManager();
+                textureManager.registerTexture(starTextureId, new ResourceTexture(starTextureId));
+                AbstractTexture abstractTexture = textureManager.getTexture(starTextureId);
 
-            abstractTexture.setUseMipmaps(false);
-            abstractTexture.setFilter(false, false);
-            Matrix4fStack matrix4fStack = RenderSystem.getModelViewStack();
-            matrix4fStack.pushMatrix();
-            matrix4fStack.mul(matrices.peek().getPositionMatrix());
-            GpuTextureView gpuTextureView = MinecraftClient.getInstance().getFramebuffer().getColorAttachmentView();
-            GpuTextureView gpuTextureView2 = MinecraftClient.getInstance().getFramebuffer().getDepthAttachmentView();
-            GpuBuffer gpuBuffer = this.indexBuffer.getIndexBuffer(this.starIndexCount);
-            float time = MinecraftClient.getInstance().world.getTime() % 1200 / 20.0F;
+                abstractTexture.setUseMipmaps(false);
+                abstractTexture.setFilter(false, false);
+                Matrix4fStack matrix4fStack = RenderSystem.getModelViewStack();
+                matrix4fStack.pushMatrix();
+                matrix4fStack.mul(matrices.peek().getPositionMatrix());
+                GpuTextureView gpuTextureView = MinecraftClient.getInstance().getFramebuffer().getColorAttachmentView();
+                GpuTextureView gpuTextureView2 = MinecraftClient.getInstance().getFramebuffer().getDepthAttachmentView();
+                GpuBuffer gpuBuffer = this.indexBuffer.getIndexBuffer(this.cosmosStarIndexCount);
+                float time = MinecraftClient.getInstance().world.getTime() % 24000 / 20.0F;
 
-            GpuBufferSlice gpuBufferSlice = RenderSystem.getDynamicUniforms()
-                    .write(matrix4fStack, new Vector4f(brightness, CosmosConfig.twinkleFrequency.getFirst(), CosmosConfig.twinkleFrequency.get(1), brightness), new Vector3f(), new Matrix4f(), time);
+                GpuBufferSlice gpuBufferSlice = RenderSystem.getDynamicUniforms()
+                        .write(matrix4fStack, new Vector4f(brightness, CosmosConfig.twinkleFrequency.getFirst().floatValue(), CosmosConfig.twinkleFrequency.get(1).floatValue(), brightness), new Vector3f(), new Matrix4f(), time);
 
-            try (RenderPass renderPass = RenderSystem.getDevice()
-                    .createCommandEncoder()
-                    .createRenderPass(() -> "Stars", gpuTextureView, OptionalInt.empty(), gpuTextureView2, OptionalDouble.empty())) {
-                renderPass.setPipeline(POSITION_TEXTURE_COLOR_STARS);
-                RenderSystem.bindDefaultUniforms(renderPass);
-                renderPass.setUniform("DynamicTransforms", gpuBufferSlice);
-                renderPass.bindSampler("Sampler0", abstractTexture.getGlTextureView());
-                renderPass.setVertexBuffer(0, this.starVertexBuffer);
-                renderPass.setIndexBuffer(gpuBuffer, this.indexBuffer.getIndexType());
-                renderPass.drawIndexed(0, 0, this.starIndexCount, 1);
+                try (RenderPass renderPass = RenderSystem.getDevice()
+                        .createCommandEncoder()
+                        .createRenderPass(() -> "Stars", gpuTextureView, OptionalInt.empty(), gpuTextureView2, OptionalDouble.empty())) {
+                    renderPass.setPipeline(POSITION_TEXTURE_COLOR_STARS);
+                    RenderSystem.bindDefaultUniforms(renderPass);
+                    renderPass.setUniform("DynamicTransforms", gpuBufferSlice);
+                    renderPass.bindSampler("Sampler0", abstractTexture.getGlTextureView());
+                    renderPass.setVertexBuffer(0, this.cosmosStarVertexBuffer);
+                    renderPass.setIndexBuffer(gpuBuffer, this.indexBuffer.getIndexType());
+                    renderPass.drawIndexed(0, 0, this.cosmosStarIndexCount, 1);
+                }
+
+                matrix4fStack.popMatrix();
             }
-
-            matrix4fStack.popMatrix();
+            ci.cancel();
         }
     }
+
+    @Unique
+    private static int[] hexToRGB(String hexColor) {
+        if (hexColor.startsWith("#")) {
+            hexColor = hexColor.substring(1);
+        }
+
+        int red = Integer.parseInt(hexColor.substring(0, 2), 16);
+        int green = Integer.parseInt(hexColor.substring(2, 4), 16);
+        int blue = Integer.parseInt(hexColor.substring(4, 6), 16);
+
+        return new int[] { red, green, blue };
+    }
+
 }

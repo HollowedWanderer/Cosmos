@@ -1,0 +1,12 @@
+{
+  "cosmos.midnightconfig.title": "Cosmos",
+
+  "cosmos.midnightconfig.enabled": "Enable Mod",
+  "cosmos.midnightconfig.starCount": "Star Count",
+  "cosmos.midnightconfig.brightnessMultiplier": "Brightness Multiplier",
+  "cosmos.midnightconfig.alphaRange": "Alpha Range (between first and second value)",
+  "cosmos.midnightconfig.colors": "List of Colors (hex codes)",
+  "cosmos.midnightconfig.northStar": "North Star",
+  "cosmos.midnightconfig.twinkleFrequency": "Twinkle Frequency (between first and second value)",
+  "cosmos.midnightconfig.sizeRange": "Size Range (between first and second value)"
+}

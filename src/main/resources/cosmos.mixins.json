@@ -1,17 +1,18 @@
 {
-	"required": true,
-	"package": "net.hollowed.cosmos.mixin",
-	"compatibilityLevel": "JAVA_21",
-	"mixins": [
-
-	],
-	"client": [
-		"SkyRenderingMixin"
-	],
-	"injectors": {
-		"defaultRequire": 1
-	},
-	"overwrites": {
-		"requireAnnotations": true
+  "required": true,
+  "package": "net.hollowed.cosmos.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+  ],
+  "client": [
+    "ModMenuEntryMixin",
+    "ModMenuMixin",
+    "SkyRenderingMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "overwrites": {
+    "requireAnnotations": true
 	}
 }
