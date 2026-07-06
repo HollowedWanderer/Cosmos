@@ -7,7 +7,7 @@
   "client": [
     "ModMenuEntryMixin",
     "ModMenuMixin",
-    "SkyRenderingMixin"
+    "SkyRendererMixin"
   ],
   "injectors": {
     "defaultRequire": 1

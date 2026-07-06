@@ -4,14 +4,15 @@ import com.terraformersmc.modmenu.config.ModMenuConfig;
 import com.terraformersmc.modmenu.gui.widget.entries.ModListEntry;
 import com.terraformersmc.modmenu.util.mod.Mod;
 import net.hollowed.cosmos.Cosmos;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gl.RenderPipelines;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.text.StringVisitable;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.Language;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.ObjectSelectionList;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.locale.Language;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.FormattedText;
+import org.jetbrains.annotations.NotNull;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -20,62 +21,60 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(ModListEntry.class)
-public abstract class ModMenuMixin {
+public abstract class ModMenuMixin extends ObjectSelectionList.Entry<@NotNull ModListEntry> {
 
     @Shadow @Final public Mod mod;
 
-    @Shadow @Final protected MinecraftClient client;
+    @Shadow @Final protected Minecraft client;
+
+    @Shadow public abstract int getXOffset();
+
+    @Shadow public abstract int getYOffset();
 
     @Inject(
-            method = "render",
+            method = "extractContent",
             at = @At("TAIL")
     )
     private void modifyModNameColor(
-            DrawContext drawContext,
-            int index,
-            int y,
-            int x,
-            int rowWidth,
-            int rowHeight,
-            int mouseX,
-            int mouseY,
-            boolean hovered,
-            float delta,
-            CallbackInfo ci
+            GuiGraphicsExtractor drawContext, int mouseX, int mouseY, boolean hovered, float delta, CallbackInfo ci
     ) {
         String modId = this.mod.getId();
         int iconSize = ModMenuConfig.COMPACT_LIST.getValue() ? 19 : 32;
 
+        int x = this.getX() + this.getXOffset();
+        int y = this.getContentY() + this.getYOffset();
+        int rowWidth = this.getContentWidth();
+
         // Custom color logic
         int nameColor = 0xFF72B1FF;
 
-        Text name = Text.literal(this.mod.getTranslatedName());
-        StringVisitable trimmedName = name;
+        Component name = Component.literal(this.mod.getTranslatedName());
+        FormattedText trimmedName = name;
         int maxNameWidth = rowWidth - iconSize - 3;
-        TextRenderer font = this.client.textRenderer;
-        if (font.getWidth(name) > maxNameWidth) {
-            StringVisitable ellipsis = StringVisitable.plain("...");
-            trimmedName = StringVisitable.concat(font.trimToWidth(name, maxNameWidth - font.getWidth(ellipsis)), ellipsis);
+        Font font = this.client.font;
+        if (font.width(name) > maxNameWidth) {
+            FormattedText ellipsis = FormattedText.of("...");
+            trimmedName = FormattedText.composite(font.substrByWidth(name, maxNameWidth - font.width(ellipsis)), ellipsis);
         }
 
         if ("cosmos".equals(modId)) {
             // Modify the text rendering with a new color
-            drawContext.drawTextWithShadow(
-                    this.client.textRenderer,
-                    Language.getInstance().reorder(trimmedName),
+            drawContext.text(
+                    this.client.font,
+                    Language.getInstance().getVisualOrder(trimmedName),
                     x + iconSize + 3,
                     y + 1,
                     nameColor
             );
 
             // Draws the small icon
-            drawContext.drawTexture(RenderPipelines.GUI_TEXTURED, Identifier.of(Cosmos.MOD_ID, "cosmos_small_icon.png"), x + iconSize + 39, y - 3, 0, 0, 16, 16, 16, 16);
+            drawContext.blit(RenderPipelines.GUI_TEXTURED, Cosmos.id("cosmos_small_icon.png"), x + iconSize + 39, y - 3, 0, 0, 16, 16, 16, 16);
 
             // Draws the colored line below the one line of text
-            drawContext.drawTexture(RenderPipelines.GUI_TEXTURED, Identifier.of(Cosmos.MOD_ID, "cosmos_line.png"), x + iconSize + 3, y + 31, 0, 0, 76, 1, 76, 1);
+            drawContext.blit(RenderPipelines.GUI_TEXTURED, Cosmos.id("cosmos_line.png"), x + iconSize + 3, y + 31, 0, 0, 76, 1, 76, 1);
 
             // Draws the H signature
-            drawContext.drawTexture(RenderPipelines.GUI_TEXTURED, Identifier.of(Cosmos.MOD_ID, "h.png"), rowWidth - 2, y, 0, 0, 16, 16, 16, 16);
+            drawContext.blit(RenderPipelines.GUI_TEXTURED, Cosmos.id("h.png"), rowWidth - 2, y, 0, 0, 16, 16, 16, 16);
         }
     }
 }

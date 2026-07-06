@@ -14,11 +14,12 @@ void main() {
     float brightness = ColorModulator.x;
     float twinkleLow = ColorModulator.y;
     float twinkleHigh = ColorModulator.z;
+    float time = ColorModulator.a;
 
     float twinkleSeed = fract(sin(dot(Position.xy, vec2(12.9898, 78.233))) * 43758.5453);
     float twinkleFrequency = mix(twinkleLow, twinkleHigh, twinkleSeed);
 
-    float twinkle = 0.5 + 0.5 * sin(LineWidth * twinkleFrequency);
+    float twinkle = 0.5 + 0.5 * sin(time * twinkleFrequency);
     if (aColor.rgb == vec3(1.0, 1.0, 1.0)) {
         twinkle = 1.0;
     }
