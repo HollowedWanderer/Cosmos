@@ -35,9 +35,6 @@ import static net.minecraft.client.renderer.RenderPipelines.GLOBALS_SNIPPET;
 @Mixin(SkyRenderer.class)
 public abstract class SkyRendererMixin {
 
-    @Unique
-    private static final Identifier COSMOS_STAR_LOCATION = Cosmos.id("textures/environment/celestial/star/star.png");
-
     @Shadow
     @Final
     private RenderTarget renderTarget;
@@ -46,18 +43,16 @@ public abstract class SkyRendererMixin {
     private RenderSystem.AutoStorageIndexBuffer quadIndices;
 
     @Shadow
-    protected abstract AbstractTexture getTexture(TextureManager textureManager, Identifier location);
-
-    @Shadow
     @Final
     private TextureAtlas celestialsAtlas;
     @Unique
-    private static final RenderPipeline POSITION_TEXTURE_COLOR_STARS = RenderPipelines.register(
+    private static final RenderPipeline COSMOS_STARS = RenderPipelines.register(
             RenderPipeline.builder(GLOBALS_SNIPPET)
                     .withBindGroupLayout(BindGroupLayouts.MATRICES_PROJECTION)
-                    .withLocation("pipeline/stars")
-                    .withVertexShader("core/cosmos_stars")
-                    .withFragmentShader("core/cosmos_stars")
+                    .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
+                    .withLocation(Cosmos.id("pipeline/stars"))
+                    .withVertexShader(Cosmos.id("core/stars"))
+                    .withFragmentShader(Cosmos.id("core/stars"))
                     .withColorTargetState(new ColorTargetState(BlendFunction.OVERLAY))
                     .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX_COLOR)
                     .withPrimitiveTopology(PrimitiveTopology.QUADS)
@@ -69,15 +64,11 @@ public abstract class SkyRendererMixin {
     private int cosmosStarIndexCount;
 
     @Unique
-    private AbstractTexture starTexture;
-
-    @Unique
     private GpuBuffer cosmosStarVertexBuffer;
 
     @Inject(method = "<init>", at = @At("TAIL"))
     private void init(TextureManager textureManager, AtlasManager atlasManager, RenderTarget renderTarget, CallbackInfo ci) {
         cosmosStarVertexBuffer = createCosmosStars(this.celestialsAtlas);
-        this.starTexture = this.getTexture(textureManager, COSMOS_STAR_LOCATION);
     }
 
     @Unique
@@ -160,10 +151,10 @@ public abstract class SkyRendererMixin {
                     try (RenderPass renderPass = RenderSystem.getDevice()
                             .createCommandEncoder()
                             .createRenderPass(() -> "Stars", color, Optional.empty(), depth, OptionalDouble.empty())) {
-                        renderPass.setPipeline(POSITION_TEXTURE_COLOR_STARS);
+                        renderPass.setPipeline(COSMOS_STARS);
                         RenderSystem.bindDefaultUniforms(renderPass);
                         renderPass.setUniform("DynamicTransforms", gpuBufferSlice);
-                        renderPass.bindTexture("Sampler0", this.starTexture.getTextureView(), this.starTexture.getSampler());
+                        renderPass.bindTexture("Sampler0", this.celestialsAtlas.getTextureView(), this.celestialsAtlas.getSampler());
                         renderPass.setVertexBuffer(0, this.cosmosStarVertexBuffer.slice());
                         renderPass.setIndexBuffer(gpuBuffer, this.quadIndices.type());
                         renderPass.drawIndexed(this.cosmosStarIndexCount, 1, 0, 0, 0);

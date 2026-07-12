@@ -3,9 +3,9 @@
 #moj_import <minecraft:dynamictransforms.glsl>
 #moj_import <minecraft:projection.glsl>
 
-in vec4 aColor;
 in vec3 Position;
 in vec2 UV0;
+in vec4 Color;
 
 out vec4 vColor;
 out vec2 vTexCoord;
@@ -20,16 +20,16 @@ void main() {
     float twinkleFrequency = mix(twinkleLow, twinkleHigh, twinkleSeed);
 
     float twinkle = 0.5 + 0.5 * sin(time * twinkleFrequency);
-    if (aColor.rgb == vec3(1.0, 1.0, 1.0)) {
+    if (Color.rgb == vec3(1.0, 1.0, 1.0)) {
         twinkle = 1.0;
     }
 
-    vec3 modulated = aColor.rgb * brightness * twinkle;
-    if (aColor.rgb == vec3(1.0, 1.0, 1.0)) {
+    vec3 modulated = Color.rgb * brightness * twinkle;
+    if (Color.rgb == vec3(1.0, 1.0, 1.0)) {
         modulated *= 2;
     }
 
-    vColor = vec4(modulated, aColor.a);
+    vColor = vec4(modulated, Color.a);
     vTexCoord = UV0;
     gl_Position = ProjMat * ModelViewMat * vec4(Position, 1.0);
 }

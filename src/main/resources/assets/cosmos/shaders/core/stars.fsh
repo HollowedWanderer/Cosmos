@@ -2,9 +2,11 @@
 
 #moj_import <minecraft:dynamictransforms.glsl>
 
+uniform sampler2D Sampler0;
+
 in vec4 vColor;
 in vec2 vTexCoord;
-uniform sampler2D Sampler0;
+
 out vec4 fragColor;
 
 void main() {
