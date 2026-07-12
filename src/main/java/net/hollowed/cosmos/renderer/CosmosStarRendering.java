@@ -101,7 +101,7 @@ public class CosmosStarRendering {
         return var19;
     }
 
-    private static int[] hexToRGB(String hexColor) {
+    public static int[] hexToRGB(String hexColor) {
         if (hexColor.startsWith("#")) {
             hexColor = hexColor.substring(1);
         }
