@@ -6,7 +6,7 @@
   "cosmos.midnightconfig.brightnessMultiplier": "Brightness Multiplier",
   "cosmos.midnightconfig.alphaRange": "Alpha Range (between first and second value)",
   "cosmos.midnightconfig.colors": "List of Colors (hex codes)",
-  "cosmos.midnightconfig.northStar": "North Star",
+  "cosmos.midnightconfig.northStar": "Polaris Toggle",
   "cosmos.midnightconfig.twinkleFrequency": "Twinkle Frequency (between first and second value)",
   "cosmos.midnightconfig.sizeRange": "Size Range (between first and second value)"
 }
