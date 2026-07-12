@@ -1,6 +1,9 @@
 package net.hollowed.cosmos.config;
 
 import eu.midnightdust.lib.config.MidnightConfig;
+import net.hollowed.cosmos.renderer.CosmosStarRendering;
+import net.minecraft.client.Minecraft;
+import net.minecraft.data.AtlasIds;
 
 import java.util.List;
 
@@ -36,4 +39,11 @@ public class CosmosConfig extends MidnightConfig {
 
     @Entry(precision = 10000)
     public static List<Double> sizeRange = List.of(0.3, 0.9);
+
+    @Override
+    public void writeChanges() {
+        super.writeChanges();
+        CosmosStarRendering.cosmosStarVertexBuffer.close();
+        CosmosStarRendering.cosmosStarVertexBuffer = CosmosStarRendering.createCosmosStars(Minecraft.getInstance().getAtlasManager().getAtlasOrThrow(AtlasIds.CELESTIALS));
+    }
 }

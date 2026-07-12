@@ -17,9 +17,6 @@
 	"entrypoints": {
 		"main": [
 			"net.hollowed.cosmos.Cosmos"
-		],
-		"client": [
-			"net.hollowed.cosmos.CosmosClient"
 		]
 	},
 	"mixins": [
