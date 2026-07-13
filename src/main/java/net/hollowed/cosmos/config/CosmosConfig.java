@@ -43,7 +43,9 @@ public class CosmosConfig extends MidnightConfig {
     @Override
     public void writeChanges() {
         super.writeChanges();
-        CosmosStarRendering.cosmosStarVertexBuffer.close();
-        CosmosStarRendering.cosmosStarVertexBuffer = CosmosStarRendering.createCosmosStars(Minecraft.getInstance().getAtlasManager().getAtlasOrThrow(AtlasIds.CELESTIALS));
+        if (CosmosStarRendering.cosmosStarVertexBuffer != null) {
+            CosmosStarRendering.cosmosStarVertexBuffer.close();
+            CosmosStarRendering.cosmosStarVertexBuffer = CosmosStarRendering.createCosmosStars(Minecraft.getInstance().getAtlasManager().getAtlasOrThrow(AtlasIds.CELESTIALS));
+        }
     }
 }
