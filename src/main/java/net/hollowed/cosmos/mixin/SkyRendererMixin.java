@@ -1,12 +1,11 @@
 package net.hollowed.cosmos.mixin;
 
-import com.mojang.blaze3d.buffers.GpuBuffer;
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.pipeline.*;
-import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.*;
+import com.mojang.renderpearl.api.buffers.GpuBuffer;
+import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
+import com.mojang.renderpearl.api.commands.RenderPass;
 import net.hollowed.cosmos.config.CosmosConfig;
 import net.hollowed.cosmos.renderer.CosmosStarRendering;
 import net.minecraft.client.Minecraft;
@@ -19,15 +18,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.util.Optional;
-import java.util.OptionalDouble;
-
 @Mixin(SkyRenderer.class)
 public abstract class SkyRendererMixin {
-
-    @Shadow
-    @Final
-    private RenderTarget renderTarget;
     @Shadow
     @Final
     private RenderSystem.AutoStorageIndexBuffer quadIndices;
@@ -42,7 +34,7 @@ public abstract class SkyRendererMixin {
     }
 
     @Inject(method = "renderStars", at = @At("HEAD"), cancellable = true)
-    private void renderStars(float starBrightness, PoseStack poseStack, CallbackInfo ci) {
+    private void renderStars(RenderPass renderPass, float starBrightness, PoseStack poseStack, CallbackInfo ci) {
         if (CosmosConfig.enabled) {
             if (Minecraft.getInstance().level != null) {
                 starBrightness *= CosmosConfig.brightnessMultiplier;
@@ -50,27 +42,20 @@ public abstract class SkyRendererMixin {
                 Matrix4fStack matrix4fStack = RenderSystem.getModelViewStack();
                 matrix4fStack.pushMatrix();
                 matrix4fStack.mul(poseStack.last().pose());
-                GpuTextureView color = this.renderTarget.getColorTextureView();
-                GpuTextureView depth = this.renderTarget.getDepthTextureView();
+
                 GpuBuffer gpuBuffer = this.quadIndices.getBuffer(CosmosStarRendering.cosmosStarIndexCount);
                 float time = Minecraft.getInstance().level.getGameTime() % 24000 / 20.0F;
 
                 GpuBufferSlice gpuBufferSlice = RenderSystem.getDynamicUniforms()
                         .writeTransform(matrix4fStack, new Vector4f(starBrightness, CosmosConfig.twinkleFrequency.getFirst().floatValue(), CosmosConfig.twinkleFrequency.get(1).floatValue(), time));
 
-                if (color != null) {
-                    try (RenderPass renderPass = RenderSystem.getDevice()
-                            .createCommandEncoder()
-                            .createRenderPass(() -> "Stars", color, Optional.empty(), depth, OptionalDouble.empty())) {
-                        renderPass.setPipeline(CosmosStarRendering.COSMOS_STARS);
-                        RenderSystem.bindDefaultUniforms(renderPass);
-                        renderPass.setUniform("DynamicTransforms", gpuBufferSlice);
-                        renderPass.bindTexture("Sampler0", this.celestialsAtlas.getTextureView(), this.celestialsAtlas.getSampler());
-                        renderPass.setVertexBuffer(0, CosmosStarRendering.cosmosStarVertexBuffer.slice());
-                        renderPass.setIndexBuffer(gpuBuffer, this.quadIndices.type());
-                        renderPass.drawIndexed(CosmosStarRendering.cosmosStarIndexCount, 1, 0, 0, 0);
-                    }
-                }
+                renderPass.setPipeline(RenderSystem.getCompiledPipeline(CosmosStarRendering.COSMOS_STARS));
+                RenderSystem.bindDefaultUniforms(renderPass);
+                renderPass.setUniform("DynamicTransforms", gpuBufferSlice);
+                renderPass.setUniform("Sampler0", this.celestialsAtlas.getTextureView(), this.celestialsAtlas.getSampler());
+                renderPass.setVertexBuffer(0, CosmosStarRendering.cosmosStarVertexBuffer.slice());
+                renderPass.setIndexBuffer(gpuBuffer, this.quadIndices.type());
+                renderPass.drawIndexed(CosmosStarRendering.cosmosStarIndexCount, 1, 0, 0, 0);
 
                 matrix4fStack.popMatrix();
             }
